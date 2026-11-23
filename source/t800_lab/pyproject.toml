@@ -1,0 +1,6 @@
+[build-system]
+# pip install -e 时，pip 会先建一个隔离的构建环境。
+# setup.py 里 import 了 toml 来读 config/extension.toml，
+# 所以构建环境也必须装 toml，否则会报 ModuleNotFoundError。
+requires = ["setuptools>=61", "toml>=0.10"]
+build-backend = "setuptools.build_meta"
