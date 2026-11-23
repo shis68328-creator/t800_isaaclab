@@ -58,6 +58,8 @@ parser.add_argument("--num_envs", type=int, default=2048)
 parser.add_argument("--seed", type=int, default=0)
 # 覆盖 PPO 配置里的 max_iterations
 parser.add_argument("--max_iterations", type=int, default=None)
+# 从已有 checkpoint 继续训练（rsl_rl 的 .pt）
+parser.add_argument("--resume", type=str, default="", help="从 model_xxx.pt 继续训练")
 # 添加 Isaac Sim 自己的参数（--headless、--device 等）
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -167,6 +169,12 @@ def main():
         log_dir=log_dir,
         device=agent_cfg.device,
     )
+
+    # 从 checkpoint 继续：会恢复网络权重、优化器和当前 iteration
+    if args_cli.resume:
+        print(f"[INFO] 从 checkpoint 继续训练: {args_cli.resume}", flush=True)
+        runner.load(args_cli.resume)
+
     print("[DEBUG] before runner.learn", flush=True)
     runner.learn(
         num_learning_iterations=agent_cfg.max_iterations,
