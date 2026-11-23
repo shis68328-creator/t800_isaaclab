@@ -61,6 +61,7 @@ def main():
     foot_ids = [robot.body_names.index("LINK_ANKLE_ROLL_L"), robot.body_names.index("LINK_ANKLE_ROLL_R")]
     base_id = robot.body_names.index("LINK_BASE")
     print("foot body ids:", foot_ids)
+    print("sensor body names:", sensor.body_names)
 
     # 零动作 = 目标关节角等于默认站立角。
     # 不要用 env.action_space.shape[0]：这个版本它是 (1, 25)，
@@ -81,10 +82,11 @@ def main():
                 force_now = forces[0]
             norms = force_now.norm(dim=-1)
             top = norms.topk(min(5, norms.numel()))
+            # 必须用 sensor.body_names 的顺序，不能拿 robot.body_names 索引
             print(
                 f"[contact step {i}] "
                 + ", ".join(
-                    f"{robot.body_names[j]}={norms[j].item():.1f}N"
+                    f"{sensor.body_names[j]}={norms[j].item():.1f}N"
                     for j in top.indices.tolist()
                 )
             )
