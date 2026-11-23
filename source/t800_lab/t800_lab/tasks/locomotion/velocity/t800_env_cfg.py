@@ -66,6 +66,32 @@ def foot_clearance(env, asset_cfg: SceneEntityCfg, min_height=0.06, max_height=0
     return torch.clamp(foot_z - min_height, 0.0, max_height - min_height).sum(dim=1)
 
 
+def single_support(
+    env,
+    sensor_cfg: SceneEntityCfg,
+    command_name: str = "base_velocity",
+    threshold: float = 1.0,
+    min_speed: float = 0.1,
+):
+    """移动时只有一只脚着地，给奖励。
+
+    双脚都着地 = 站着/蹭着走；双脚都离地 = 跳。
+    只有单脚支撑才是正常迈步。
+    """
+    sensor = env.scene.sensors[sensor_cfg.name]
+    # net_forces_w: (num_envs, num_bodies, 3)，取竖直方向
+    forces_z = sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]
+    contact = forces_z > threshold
+    num_contact = contact.sum(dim=1)
+
+    # 只有命令速度足够大时才要求单脚支撑；
+    # 命令为 0 时允许双脚站立。
+    command_vx = env.command_manager.get_command(command_name)[:, 0]
+    moving = command_vx.abs() > min_speed
+
+    return ((num_contact == 1) & moving).float()
+
+
 def _set_weight(rewards, name: str, value: float):
     """安全地修改某个奖励项的权重。
 
@@ -155,7 +181,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # 动作用“关节位置增量”：策略输出 [-1,1]，乘 scale 加到默认关节角上。
         # scale=0.25 表示一个动作单位最多让关节偏 0.25 rad。
-        self.actions.joint_pos.scale = 0.30
+        self.actions.joint_pos.scale = 0.35
         # 以 init_state 的默认关节角为基准（而不是 URDF 的零位）
         self.actions.joint_pos.use_default_offset = True
         # 动作只给 12 个腿关节，手臂不参与策略输出
@@ -210,10 +236,24 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
             if "sensor_cfg" in self.rewards.undesired_contacts.params:
                 self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["LINK_BASE"]
 
+        # 单脚支撑奖励：移动时只允许一只脚着地，逼它交替迈步
+        self.rewards.single_support = RewardTermCfg(
+            func=single_support,
+            weight=2.0,
+            params={
+                "sensor_cfg": SceneEntityCfg(
+                    "contact_forces", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]
+                ),
+                "command_name": "base_velocity",
+                "threshold": 1.0,
+                "min_speed": 0.1,
+            },
+        )
+
         # 抬脚高度奖励：脚离地 6cm 以上就开始给分
         self.rewards.foot_clearance = RewardTermCfg(
             func=foot_clearance,
-            weight=1.5,
+            weight=3.0,
             params={
                 "asset_cfg": SceneEntityCfg("robot", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]),
                 "min_height": 0.06,
