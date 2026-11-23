@@ -182,7 +182,7 @@ cd ~/t800_isaaclab
 python scripts/record_mnn_reference.py \
   --mujoco-dir ~/mujoco_t800 \
   --out assets/reference/walk_ref.npz \
-  --command 1.0 --warmup 2 --duration 3
+  --command 1.0 --warmup 2 --duration 10
 ```
 
 生成 `assets/reference/walk_ref.npz`，并同步到

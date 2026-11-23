@@ -46,6 +46,10 @@ class RefJointPositionAction(ActionTerm):
         return len(self._joint_ids)
 
     @property
+    def joint_ids(self):
+        return self._joint_ids
+
+    @property
     def raw_actions(self) -> torch.Tensor:
         return self._raw_actions
 

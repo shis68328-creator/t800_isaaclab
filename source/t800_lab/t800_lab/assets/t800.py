@@ -161,3 +161,40 @@ T800_CFG = ArticulationCfg(
         ),
     },
 )
+
+
+# Mimic 任务用：PD 增益和 MNN 参考步态一致，初始高度取参考步态的平均高度。
+T800_MIMIC_CFG = T800_CFG.replace(
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 1.01),
+        joint_pos=DEFAULT_JOINT_POS,
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        "hip_pitch_knee": ImplicitActuatorCfg(
+            joint_names_expr=[".*HIP_PITCH.*", ".*KNEE_PITCH.*"],
+            stiffness=180.0,
+            damping=5.0,
+        ),
+        "hip_roll_yaw": ImplicitActuatorCfg(
+            joint_names_expr=[".*HIP_ROLL.*", ".*HIP_YAW.*"],
+            stiffness=100.0,
+            damping=3.0,
+        ),
+        "ankle": ImplicitActuatorCfg(
+            joint_names_expr=[".*ANKLE.*"],
+            stiffness=40.0,
+            damping=0.3,
+        ),
+        "arm": ImplicitActuatorCfg(
+            joint_names_expr=[".*SHOULDER.*", ".*ELBOW.*"],
+            stiffness=60.0,
+            damping=0.3,
+        ),
+        "torso_head": ImplicitActuatorCfg(
+            joint_names_expr=[".*TORSO.*", ".*HEAD.*"],
+            stiffness=100.0,
+            damping=1.0,
+        ),
+    },
+)

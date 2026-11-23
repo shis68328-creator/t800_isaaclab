@@ -25,13 +25,14 @@ from isaaclab.sensors import ContactSensorCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 
-from t800_lab.assets.t800 import T800_CFG
+from t800_lab.assets.t800 import T800_MIMIC_CFG
 from t800_lab.tasks.locomotion.mimic.mdp import (
     RefJointPositionActionCfg,
     ref_joint_pos,
     ref_phase,
     track_base_vel,
     track_ref_joint_pos,
+    reset_joints_to_reference,
 )
 
 # t800_lab/assets/reference/walk_ref.npz
@@ -40,7 +41,7 @@ REF_PATH = str(Path(__file__).resolve().parents[3] / "assets/reference/walk_ref.
 
 @configclass
 class MimicSceneCfg(InteractiveSceneCfg):
-    robot: ArticulationCfg = T800_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = T800_MIMIC_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -145,9 +146,9 @@ class EventsCfg:
     )
 
     reset_joints = EventTerm(
-        func=base_mdp.reset_joints_by_scale,
+        func=reset_joints_to_reference,
         mode="reset",
-        params={"position_range": (1.0, 1.0), "velocity_range": (0.0, 0.0)},
+        params={},
     )
 
 
