@@ -125,13 +125,15 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
             "threshold": 0.4,
         }
 
-        # 足端滑动惩罚
-        self.rewards.feet_slide.func = mdp.feet_slide
-        self.rewards.feet_slide.weight = -0.1
-        self.rewards.feet_slide.params = {
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
-            "asset_cfg": SceneEntityCfg("robot", body_names=FEET),
-        }
+        # 足端滑动惩罚（基类没有这项，新建）
+        self.rewards.feet_slide = RewTerm(
+            func=mdp.feet_slide,
+            weight=-0.1,
+            params={
+                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
+                "asset_cfg": SceneEntityCfg("robot", body_names=FEET),
+            },
+        )
 
         # 姿态/平滑/省力
         self.rewards.flat_orientation_l2.weight = -1.0
