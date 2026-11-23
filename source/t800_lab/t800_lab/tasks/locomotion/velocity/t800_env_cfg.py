@@ -143,19 +143,21 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # 力矩/加速度惩罚只作用于腿
         self.rewards.dof_torques_l2.weight = -1.5e-7
-        self.rewards.dof_torques_l2.params["asset_cfg"] = SceneEntityCfg(
-            "robot", joint_names=[".*HIP_.*", ".*KNEE_.*", ".*ANKLE_.*"]
-        )
+        self.rewards.dof_torques_l2.params = {
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*HIP_.*", ".*KNEE_.*", ".*ANKLE_.*"]
+            )
+        }
         self.rewards.dof_acc_l2.weight = -1.25e-7
-        self.rewards.dof_acc_l2.params["asset_cfg"] = SceneEntityCfg(
-            "robot", joint_names=[".*HIP_.*", ".*KNEE_.*"]
-        )
+        self.rewards.dof_acc_l2.params = {
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*HIP_.*", ".*KNEE_.*"])
+        }
 
         # 踝关节限位
         self.rewards.dof_pos_limits.weight = -1.0
-        self.rewards.dof_pos_limits.params["asset_cfg"] = SceneEntityCfg(
-            "robot", joint_names=[".*ANKLE_.*"]
-        )
+        self.rewards.dof_pos_limits.params = {
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*ANKLE_.*"])
+        }
 
         # 关节偏离惩罚：髋 yaw/roll、手臂、躯干
         self.rewards.joint_deviation_hip = RewTerm(
