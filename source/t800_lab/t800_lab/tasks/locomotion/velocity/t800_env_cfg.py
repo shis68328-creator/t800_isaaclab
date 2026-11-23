@@ -93,7 +93,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 4. 动作
         # ==============================================================
         # 官方人形 action scale 是 0.25
-        self.actions.joint_pos.scale = 0.25
+        self.actions.joint_pos.scale = 0.35
         self.actions.joint_pos.use_default_offset = True
         self.actions.joint_pos.joint_names = LEG_JOINTS
 
@@ -101,8 +101,9 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 5. 奖励：官方 G1/H1 风格
         # ==============================================================
         # 摔倒惩罚非常重：-200
-        # -200 太强，策略会为了不摔而站着不动；先降到 -100
-        self.rewards.termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
+        # -100 还是太强，策略选择站着不动。
+        # 先降到 -20 做“惩罚课程”，让它敢迈步；稳定后再加回 -50/-100。
+        self.rewards.termination_penalty = RewTerm(func=mdp.is_terminated, weight=-20.0)
 
         # 线速度跟踪：用 yaw frame，官方 G1/H1 都是这个
         self.rewards.track_lin_vel_xy_exp.func = mdp.track_lin_vel_xy_yaw_frame_exp
