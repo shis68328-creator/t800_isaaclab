@@ -33,7 +33,10 @@ SceneEntityCfg / RewTerm / ObsTerm：
     我们通过 .params 修改具体参数（比如足端 body 名字）。
 """
 
+import torch
+
 import isaaclab.sim as sim_utils
+from isaaclab.managers import RewardTermCfg, SceneEntityCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import (
@@ -50,6 +53,17 @@ LEG_JOINTS = [
     "J06_HIP_PITCH_R", "J07_HIP_ROLL_R", "J08_HIP_YAW_R",
     "J09_KNEE_PITCH_R", "J10_ANKLE_PITCH_R", "J11_ANKLE_ROLL_R",
 ]
+
+
+def foot_clearance(env, asset_cfg: SceneEntityCfg, min_height=0.06, max_height=0.12):
+    """脚底离地高度奖励。
+
+    脚站着时 body 原点大约 0.05 m，min_height=0.06 表示抬脚才开始给分。
+    这是一个“塑形奖励”，帮助策略先探索抬脚，不依赖完整的落地 air time。
+    """
+    robot = env.scene[asset_cfg.name]
+    foot_z = robot.data.body_pos_w[:, asset_cfg.body_ids, 2]
+    return torch.clamp(foot_z - min_height, 0.0, max_height - min_height).sum(dim=1)
 
 
 def _set_weight(rewards, name: str, value: float):
@@ -141,7 +155,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # 动作用“关节位置增量”：策略输出 [-1,1]，乘 scale 加到默认关节角上。
         # scale=0.25 表示一个动作单位最多让关节偏 0.25 rad。
-        self.actions.joint_pos.scale = 0.25
+        self.actions.joint_pos.scale = 0.35
         # 以 init_state 的默认关节角为基准（而不是 URDF 的零位）
         self.actions.joint_pos.use_default_offset = True
         # 动作只给 12 个腿关节，手臂不参与策略输出
@@ -163,7 +177,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         _set_weight(self.rewards, "joint_acc_l2", -1e-8)
         _set_weight(self.rewards, "action_rate_l2", -0.02)
         # 足端腾空时间：鼓励迈步；跑步时自然鼓励腾空
-        _set_weight(self.rewards, "feet_air_time", 5.0)
+        _set_weight(self.rewards, "feet_air_time", 10.0)
         # 足端滑动：脚在地上蹭要扣分
         _set_weight(self.rewards, "feet_slide", -0.05)
         # 非足端着地（比如膝盖、基座）
@@ -184,7 +198,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         if hasattr(self.rewards, "feet_air_time"):
             # 0.15 秒对 T800 早期小步仍然太高，落地时 (air_time - 0.15)
             # 是负数，等于惩罚抬脚。降到 0.02 秒，抬一点就能拿正奖励。
-            self.rewards.feet_air_time.params["threshold"] = 0.02
+            self.rewards.feet_air_time.params["threshold"] = 0.0
             if "sensor_cfg" in self.rewards.feet_air_time.params:
                 self.rewards.feet_air_time.params["sensor_cfg"].body_names = feet
         if hasattr(self.rewards, "feet_slide"):
@@ -195,6 +209,17 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         if hasattr(self.rewards, "undesired_contacts"):
             if "sensor_cfg" in self.rewards.undesired_contacts.params:
                 self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["LINK_BASE"]
+
+        # 抬脚高度奖励：脚离地 6cm 以上就开始给分
+        self.rewards.foot_clearance = RewardTermCfg(
+            func=foot_clearance,
+            weight=3.0,
+            params={
+                "asset_cfg": SceneEntityCfg("robot", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]),
+                "min_height": 0.06,
+                "max_height": 0.12,
+            },
+        )
 
         # ==============================================================
         # 6.5 基座随机化事件
