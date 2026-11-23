@@ -10,6 +10,8 @@
 import argparse
 import glob
 import os
+import sys
+from pathlib import Path
 
 from isaaclab.app import AppLauncher
 
@@ -35,6 +37,8 @@ from rsl_rl.runners import OnPolicyRunner
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from isaaclab_tasks.utils import parse_env_cfg
 from isaaclab_tasks.utils.parse_cfg import load_cfg_from_registry
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source/t800_lab"))
 
 import t800_lab  # noqa: F401
 

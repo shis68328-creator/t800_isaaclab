@@ -17,7 +17,7 @@ setup(
     version=EXTENSION_TOML_DATA["package"]["version"],
     description=EXTENSION_TOML_DATA["package"]["description"],
     keywords=EXTENSION_TOML_DATA["package"]["keywords"],
-    install_requires=["psutil", "numpy", "torch"],
+    install_requires=["psutil", "toml"],
     license="Apache License 2.0",
     include_package_data=True,
     python_requires=">=3.10",

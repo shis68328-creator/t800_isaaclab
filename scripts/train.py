@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # 先启动 Isaac Sim，再导入其它 Isaac Lab 模块
 from isaaclab.app import AppLauncher
@@ -36,6 +37,9 @@ from isaaclab.utils.io import dump_yaml
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from isaaclab_tasks.utils import parse_env_cfg
 from isaaclab_tasks.utils.parse_cfg import load_cfg_from_registry
+
+# 没有 pip install 时，也能直接从 source/ 导入并注册任务
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source/t800_lab"))
 
 # 导入包会注册 Isaac-T800-Locomotion-v0
 import t800_lab  # noqa: F401

@@ -1,0 +1,21 @@
+# 在 Isaac Lab 的 conda 环境里安装本文件。
+# 注意：不要用 pip 安装 isaaclab / isaacsim / torch / rsl-rl-lib，
+#       它们必须由 Isaac Lab 官方安装流程提供，版本要互相匹配。
+#
+# 使用：
+#   conda activate Isaaclab
+#   pip install -r requirements.txt
+#   pip install -e source/t800_lab
+
+# 本项目扩展需要的额外依赖
+psutil>=5.9
+toml>=0.10.2
+
+# 训练曲线可视化（scripts/train.py 的 TensorBoard）
+tensorboard>=2.14
+
+# 以下由 Isaac Lab 环境自带，取消注释前先确认版本：
+# rsl-rl-lib
+# gymnasium
+# numpy
+# torch

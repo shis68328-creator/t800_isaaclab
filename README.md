@@ -35,14 +35,35 @@ t800_isaaclab/
 - Python 3.10 / 3.11（跟随 Isaac Lab 要求）
 - 显存 16 GB：建议 `--num_envs 1024` 或 `2048`，4096 可能 OOM
 
-## 安装
+## 0. 检查 conda 环境
 
-先按 Isaac Lab 官方文档装好 Isaac Sim 和 Isaac Lab，然后：
+先确认 Isaac Lab 的环境能正常导入：
 
 ```bash
+conda activate Isaaclab
 cd t800_isaaclab
+python scripts/check_env.py
+```
+
+会检查 isaaclab / isaaclab_rl / isaaclab_tasks / rsl_rl / torch / gymnasium，
+以及 CUDA、驱动、T800 资产和 USD 是否存在。缺什么按提示补。
+
+## 安装
+
+先按 Isaac Lab 官方文档装好 Isaac Sim 和 Isaac Lab，然后在本项目里：
+
+```bash
+conda activate Isaaclab
+cd t800_isaaclab
+pip install -r requirements.txt
 pip install -e source/t800_lab
 ```
+
+`requirements.txt` 只装本项目额外需要的 `psutil / toml / tensorboard`，
+不会碰 Isaac Lab、Isaac Sim、torch、rsl-rl-lib，避免把环境版本搞乱。
+
+如果不想 `pip install -e`，`scripts/train.py` 和 `play.py` 也会自动把
+`source/t800_lab` 加进 `sys.path`，可以直接运行。
 
 ## 1. 生成 USD
 
@@ -71,7 +92,7 @@ ls -lh source/t800_lab/t800_lab/assets/t800.usd
 ```bash
 python scripts/train.py \
     --task Isaac-T800-Locomotion-v0 \
-    --num_envs 2048 \
+    --num_envs 1024 \
     --headless
 ```
 
