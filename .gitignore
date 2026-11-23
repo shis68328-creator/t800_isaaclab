@@ -1,0 +1,35 @@
+# ---- 操作系统 / 编辑器 ----
+.DS_Store
+.vscode/
+.idea/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 训练日志 / 模型 ----
+logs/
+*.pt
+*.pth
+*.onnx
+
+# ---- Isaac Lab 生成文件 ----
+# USD 由 scripts/convert_t800.py 生成，不入库
+*.usd
+*.usda
+*.usdc
+# 转换脚本生成的本地 URDF（mesh 路径已改写），可随时重新生成
+assets/t800/urdf/serial_t800_local.urdf
+
+# ---- T800 资产 ----
+# 默认把 meshes / texture 一起提交（约 112 MB，克隆后可直接转 USD）。
+# 如果只想提交代码，取消下面两行的注释：
+# assets/t800/meshes/
+# assets/t800/texture/

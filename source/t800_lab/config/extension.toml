@@ -1,0 +1,19 @@
+[package]
+version = "0.1.0"
+category = "isaaclab"
+readme = "README.md"
+title = "T800 Isaac Lab"
+author = "akihisa"
+maintainer = "akihisa"
+description = "T800 humanoid locomotion training with Isaac Lab"
+repository = "https://github.com/shis68328-creator/mujoco_t800"
+keywords = ["isaaclab", "t800", "humanoid", "locomotion"]
+
+[dependencies]
+"isaaclab" = {}
+"isaaclab_assets" = {}
+"isaaclab_rl" = {}
+"isaaclab_tasks" = {}
+
+[[python.module]]
+name = "t800_lab"
