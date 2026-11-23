@@ -32,6 +32,7 @@ from t800_lab.tasks.locomotion.mimic.mdp import (
     ref_phase,
     track_base_vel,
     track_ref_joint_pos,
+    track_ref_joint_l2,
     reset_joints_to_reference,
 )
 
@@ -103,14 +104,27 @@ class ActionsCfg:
 
 @configclass
 class RewardsCfg:
-    # 跟踪参考关节角
-    track_joint = RewTerm(func=track_ref_joint_pos, weight=3.0, params={"std": 0.3})
+    # 跟踪参考关节角：指数 + L2 两种，L2 提供连续梯度
+    track_joint = RewTerm(func=track_ref_joint_pos, weight=5.0, params={"std": 0.5})
+    track_joint_l2 = RewTerm(func=track_ref_joint_l2, weight=-1.0)
     # 跟踪参考前进速度
     track_vel = RewTerm(func=track_base_vel, weight=2.0, params={"target": 0.5, "std": 0.5})
     # 姿态/平滑/省力
     flat_orientation = RewTerm(func=base_mdp.flat_orientation_l2, weight=-1.0)
     action_rate = RewTerm(func=base_mdp.action_rate_l2, weight=-0.01)
     joint_torques = RewTerm(func=base_mdp.joint_torques_l2, weight=-1e-6)
+    # 非脚着地（膝盖、肩膀、髋、基座）惩罚
+    undesired_contacts = RewTerm(
+        func=base_mdp.undesired_contacts,
+        weight=-2.0,
+        params={
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=["LINK_BASE", "LINK_KNEE.*", "LINK_SHOULDER.*", "LINK_HIP.*"],
+            ),
+            "threshold": 1.0,
+        },
+    )
     # 摔倒惩罚
     termination = RewTerm(func=base_mdp.is_terminated, weight=-20.0)
 
@@ -122,6 +136,16 @@ class TerminationsCfg:
         func=base_mdp.illegal_contact,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["LINK_BASE"]),
+            "threshold": 1.0,
+        },
+    )
+    # 膝盖/肩膀着地也终止，防止跪着撑到超时
+    non_foot_contact = DoneTerm(
+        func=base_mdp.illegal_contact,
+        params={
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=["LINK_KNEE.*", "LINK_SHOULDER.*"]
+            ),
             "threshold": 1.0,
         },
     )

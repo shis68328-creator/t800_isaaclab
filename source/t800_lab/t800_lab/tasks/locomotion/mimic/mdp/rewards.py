@@ -17,3 +17,11 @@ def track_base_vel(env, target: float = 0.5, std: float = 0.5) -> torch.Tensor:
     robot = env.scene["robot"]
     vx = robot.data.root_lin_vel_b[:, 0]
     return torch.exp(-((vx - target) ** 2) / (std ** 2))
+
+
+def track_ref_joint_l2(env) -> torch.Tensor:
+    """参考关节角的 L2 误差（作为负奖励，提供连续梯度）。"""
+    robot = env.scene["robot"]
+    term = env.action_manager.get_term("joint_pos")
+    ref = term.get_reference()
+    return torch.sum((robot.data.joint_pos - ref) ** 2, dim=1)
