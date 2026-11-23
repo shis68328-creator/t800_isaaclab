@@ -78,6 +78,19 @@ def main():
         fix_base=False,                   # 机器人是浮动基座，不固定
         merge_fixed_joints=False,         # 保留 fixed link（脚、手腕）
         force_usd_conversion=True,        # 每次都重新转
+        # URDF 转 USD 时必须给一组默认的关节 PD 增益，
+        # 否则 UrdfConverterCfg.validate() 会报
+        # "Missing values ... joint_drive.gains.stiffness"。
+        # 这只是 USD 里的初始 drive；真正训练时会被
+        # assets/t800.py 里的 ImplicitActuatorCfg 覆盖。
+        joint_drive=UrdfConverterCfg.JointDriveCfg(
+            drive_type="force",
+            target_type="position",
+            gains=UrdfConverterCfg.JointDriveCfg.PDGainsCfg(
+                stiffness=100.0,
+                damping=1.0,
+            ),
+        ),
     )
     converter = UrdfConverter(cfg)
 
