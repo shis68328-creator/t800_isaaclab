@@ -92,6 +92,36 @@ def single_support(
     return ((num_contact == 1) & moving).float()
 
 
+def contact_count_penalty(
+    env,
+    sensor_cfg: SceneEntityCfg,
+    command_name: str = "base_velocity",
+    mode: str = "double",
+    threshold: float = 1.0,
+    min_speed: float = 0.1,
+):
+    """移动时惩罚双脚同时着地（double）或双脚同时离地（flight）。
+
+    配合 single_support 奖励，形成“移动时必须恰好一只脚着地”的约束。
+    """
+    sensor = env.scene.sensors[sensor_cfg.name]
+    forces_z = sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]
+    contact = forces_z > threshold
+    num_contact = contact.sum(dim=1)
+
+    command_vx = env.command_manager.get_command(command_name)[:, 0]
+    moving = command_vx.abs() > min_speed
+
+    if mode == "double":
+        bad = num_contact == 2
+    elif mode == "flight":
+        bad = num_contact == 0
+    else:
+        raise ValueError(f"unknown mode: {mode}")
+
+    return (bad & moving).float()
+
+
 def _set_weight(rewards, name: str, value: float):
     """安全地修改某个奖励项的权重。
 
@@ -249,6 +279,26 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "min_speed": 0.1,
             },
         )
+
+        # 惩罚双脚同时着地 / 同时离地，逼它保持单脚支撑
+        for mode, weight in (("double", -2.0), ("flight", -1.0)):
+            setattr(
+                self.rewards,
+                f"{mode}_support_penalty",
+                RewardTermCfg(
+                    func=contact_count_penalty,
+                    weight=weight,
+                    params={
+                        "sensor_cfg": SceneEntityCfg(
+                            "contact_forces", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]
+                        ),
+                        "command_name": "base_velocity",
+                        "mode": mode,
+                        "threshold": 1.0,
+                        "min_speed": 0.1,
+                    },
+                ),
+            )
 
         # 抬脚高度奖励：脚离地 6cm 以上就开始给分
         self.rewards.foot_clearance = RewardTermCfg(
