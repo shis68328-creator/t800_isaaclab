@@ -266,7 +266,8 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 没有这项时，摔倒只是少拿未来奖励，PPO 可能觉得“倒下也无所谓”。
         if not hasattr(self.rewards, "is_terminated"):
             try:
-                from isaaclab.managers import RewardTermCfg
+                # RewardTermCfg 已经在文件顶部 import，这里不要再 import，
+                # 否则 Python 会把它当成 __post_init__ 的局部变量。
                 import isaaclab.envs.mdp as mdp
                 self.rewards.is_terminated = RewardTermCfg(
                     func=mdp.is_terminated,
