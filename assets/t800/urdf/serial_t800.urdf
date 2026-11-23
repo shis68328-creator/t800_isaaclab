@@ -183,6 +183,24 @@
         <color rgba="0.75294 0.75294 0.75294 1.0" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0.1 0.00166 -0.054" rpy="0 0 0" />
+      <geometry>
+        <box size="0.114 0.11 0.02" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.053 0.00166 -0.054" rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.10 0.02" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.092 0.00166 -0.045" rpy="0 0 0.596" />
+      <geometry>
+        <box size="0.036 0.10 0.02" />
+      </geometry>
+    </collision>
   </link>
   <joint name="J_FIXED_FOOT_L" type="fixed">
     <origin xyz="0.0 0.0 -0.06453" rpy="0 0 0" />
@@ -353,6 +371,24 @@
         <color rgba="0.75294 0.75294 0.75294 1.0" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0.1 -0.00166 -0.054" rpy="0 0 0" />
+      <geometry>
+        <box size="0.114 0.11 0.02" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.053 -0.00166 -0.054" rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.10 0.02" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.092 -0.00166 -0.045" rpy="0 0 0.596" />
+      <geometry>
+        <box size="0.036 0.10 0.02" />
+      </geometry>
+    </collision>
   </link>
   <joint name="J_FIXED_FOOT_R" type="fixed">
     <origin xyz="0.0 -0.0 -0.06453" rpy="0 0 0" />
