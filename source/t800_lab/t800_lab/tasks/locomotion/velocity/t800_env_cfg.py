@@ -1,52 +1,37 @@
-"""T800 的速度跟踪环境配置（走 + 跑）。
+"""T800 的速度跟踪环境配置（G1/H1 官方 reward 风格）。
 
 ======================================================================
-这份文件在干什么
+这份配置改了什么
 ======================================================================
-Isaac Lab 的 ManagerBasedRLEnv 用“配置类”描述环境：
-    - 场景里有什么（地面、机器人、传感器）
-    - 观测有哪些、动作是什么
-    - 奖励怎么算、什么时候回合结束
-    - 课程学习、随机化事件
+奖励不再自己手调，而是照搬 Isaac Lab 官方 Unitree G1/H1 人形配置：
+    - 摔倒惩罚 -200（非常重）
+    - 线速度/角速度跟踪用 yaw frame / world frame
+    - feet_air_time_positive_biped：只奖励单脚支撑时的步幅，短步不会被扣分
+    - 髋/臂/躯干的关节偏离惩罚
+    - 踝关节限位惩罚
+    - 关闭推力、质量、质心随机化，reset 关节不缩放
+这和之前那套“自定义 foot_clearance + 单脚/双支撑惩罚”完全不同，
+更接近官方能训出人形步态的配置。
 
-我们继承 Isaac Lab 官方自带的
-    isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg
-里的 LocomotionVelocityRoughEnvCfg（崎岖地形速度跟踪），
-然后把机器人换成 T800、地形改成平地、调奖励。
-
-======================================================================
-用到的包 / 类
-======================================================================
-sim_utils：
-    Isaac Lab 对 Isaac Sim 的封装，这里用 RigidBodyMaterialCfg 配地面摩擦。
-TerrainImporterCfg：
-    地形配置。terrain_type="plane" 表示一块无限大的平地。
-configclass：
-    Isaac Lab 的配置类装饰器，类似 dataclass，但支持嵌套配置、
-    to_dict()、replace()，Isaac Lab 的环境配置都靠它。
-LocomotionVelocityRoughEnvCfg：
-    Isaac Lab 官方“速度跟踪”环境的基类。它已经写好了：
-      - 场景、观测、动作、奖励、终止、事件、课程
-    我们只覆盖需要改的部分。
-SceneEntityCfg / RewTerm / ObsTerm：
-    基类里用到的“场景实体引用 / 奖励项 / 观测项”，
-    我们通过 .params 修改具体参数（比如足端 body 名字）。
+任务 id 仍然是 Isaac-T800-Locomotion-v0。
 """
 
-import torch
-
 import isaaclab.sim as sim_utils
-from isaaclab.managers import RewardTermCfg, SceneEntityCfg
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import (
     LocomotionVelocityRoughEnvCfg,
 )
 
+# 官方双足步态奖励（G1/H1 用的就是它）
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
+
 from t800_lab.assets.t800 import T800_CFG
 
 # 只让策略控制 12 个腿关节；手臂/躯干/头保持默认角。
-# 早期训练时手臂乱甩会明显干扰平衡。
+# 官方 G1/H1 控制全身，但 T800 手臂对早期平衡干扰大，先只控腿。
 LEG_JOINTS = [
     "J00_HIP_PITCH_L", "J01_HIP_ROLL_L", "J02_HIP_YAW_L",
     "J03_KNEE_PITCH_L", "J04_ANKLE_PITCH_L", "J05_ANKLE_ROLL_L",
@@ -54,120 +39,28 @@ LEG_JOINTS = [
     "J09_KNEE_PITCH_R", "J10_ANKLE_PITCH_R", "J11_ANKLE_ROLL_R",
 ]
 
-
-def foot_clearance(env, asset_cfg: SceneEntityCfg, min_height=0.06, max_height=0.12):
-    """脚底离地高度奖励。
-
-    脚站着时 body 原点大约 0.05 m，min_height=0.06 表示抬脚才开始给分。
-    这是一个“塑形奖励”，帮助策略先探索抬脚，不依赖完整的落地 air time。
-    """
-    robot = env.scene[asset_cfg.name]
-    foot_z = robot.data.body_pos_w[:, asset_cfg.body_ids, 2]
-    return torch.clamp(foot_z - min_height, 0.0, max_height - min_height).sum(dim=1)
-
-
-def single_support(
-    env,
-    sensor_cfg: SceneEntityCfg,
-    command_name: str = "base_velocity",
-    threshold: float = 1.0,
-    min_speed: float = 0.1,
-):
-    """移动时只有一只脚着地，给奖励。
-
-    双脚都着地 = 站着/蹭着走；双脚都离地 = 跳。
-    只有单脚支撑才是正常迈步。
-    """
-    sensor = env.scene.sensors[sensor_cfg.name]
-    # net_forces_w: (num_envs, num_bodies, 3)，取竖直方向
-    forces_z = sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]
-    contact = forces_z > threshold
-    num_contact = contact.sum(dim=1)
-
-    # 只有命令速度足够大时才要求单脚支撑；
-    # 命令为 0 时允许双脚站立。
-    command_vx = env.command_manager.get_command(command_name)[:, 0]
-    moving = command_vx.abs() > min_speed
-
-    return ((num_contact == 1) & moving).float()
-
-
-def contact_count_penalty(
-    env,
-    sensor_cfg: SceneEntityCfg,
-    command_name: str = "base_velocity",
-    mode: str = "double",
-    threshold: float = 1.0,
-    min_speed: float = 0.1,
-):
-    """移动时惩罚双脚同时着地（double）或双脚同时离地（flight）。
-
-    配合 single_support 奖励，形成“移动时必须恰好一只脚着地”的约束。
-    """
-    sensor = env.scene.sensors[sensor_cfg.name]
-    forces_z = sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]
-    contact = forces_z > threshold
-    num_contact = contact.sum(dim=1)
-
-    command_vx = env.command_manager.get_command(command_name)[:, 0]
-    moving = command_vx.abs() > min_speed
-
-    if mode == "double":
-        bad = num_contact == 2
-    elif mode == "flight":
-        bad = num_contact == 0
-    else:
-        raise ValueError(f"unknown mode: {mode}")
-
-    return (bad & moving).float()
-
-
-def _set_weight(rewards, name: str, value: float):
-    """安全地修改某个奖励项的权重。
-
-    Isaac Lab 不同版本里奖励项名字可能略有差异，直接
-    `self.rewards.feet_air_time.weight = ...` 在缺项时会报 AttributeError。
-    这里先 hasattr 判断，缺了就跳过，保证配置在多个版本上都能加载。
-    """
-    if hasattr(rewards, name):
-        getattr(rewards, name).weight = value
+# T800 的脚底接触在 LINK_FOOT_L/R（之前调试确认过）
+FEET = ["LINK_FOOT_L", "LINK_FOOT_R"]
 
 
 @configclass
 class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
-    """T800 平地速度跟踪环境。
-
-    继承基类后，只需要在 __post_init__ 里覆盖：
-      - 机器人
-      - 地形 / 高度扫描
-      - 速度指令范围
-      - 动作缩放
-      - 奖励权重和足端 body
-      - 终止条件
-    """
-
     def __post_init__(self):
-        # 必须先调用父类，让基类把所有默认配置建好
         super().__post_init__()
 
         # ==============================================================
         # 1. 机器人
         # ==============================================================
-        # 基类里的 scene.robot 是一个占位（MISSING），必须替换成 T800。
-        # replace(prim_path=...) 会复制一份配置，并指定机器人在每个环境里的路径。
-        # {ENV_REGEX_NS} 是 Isaac Lab 的占位符，会展开成 /World/envs/env_0 等。
         self.scene.robot = T800_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         # ==============================================================
-        # 2. 地形：改成平地
+        # 2. 平地，不用高度扫描
         # ==============================================================
-        # 基类默认是崎岖地形生成器。这里换成一块无限大的平面。
         self.scene.terrain = TerrainImporterCfg(
             prim_path="/World/ground",
             terrain_type="plane",
             terrain_generator=None,
             collision_group=-1,
-            # 地面摩擦：静摩擦 1.0、动摩擦 1.0，脚不容易打滑
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 static_friction=1.0,
                 dynamic_friction=1.0,
@@ -175,202 +68,135 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
             ),
             debug_vis=False,
         )
-
-        # 平地不需要高度扫描传感器。
-        # 用 hasattr 是因为不同 Isaac Lab 版本字段可能不同。
         if hasattr(self.scene, "height_scanner"):
             self.scene.height_scanner = None
         if hasattr(self.observations.policy, "height_scan"):
             self.observations.policy.height_scan = None
-        # 有些 Isaac Lab 版本只有 policy 观测组，没有 critic；
-        # 直接访问 self.observations.critic 会 AttributeError。
         if hasattr(self.observations, "critic") and hasattr(self.observations.critic, "height_scan"):
             self.observations.critic.height_scan = None
         if hasattr(self.curriculum, "terrain_levels"):
             self.curriculum.terrain_levels = None
 
         # ==============================================================
-        # 3. 速度指令
+        # 3. 速度指令（照搬 G1/H1）
         # ==============================================================
-        # 每个 episode 会随机采样一个目标速度，写进观测的 command 项。
-        # vx 范围 -0.5 ~ 2.5：负值后退，0 站立，1 左右走路，2 以上跑。
-        # 先学站立/慢走，不要一上来就给 2.5 m/s。
-        # 稳定后再把 lin_vel_x 放开到 2.0~2.5。
-        # 先只学小步直走：速度低、不随机转向。
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.5)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.1, 0.1)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.2, 0.2)
-        # 关掉“随机朝向”任务，否则它还要同时学分转向
-        self.commands.base_velocity.heading_command = False
-        self.commands.base_velocity.rel_heading_envs = 0.0
-        # 10% 的环境给 0 速度，保留站立样本
-        self.commands.base_velocity.rel_standing_envs = 0.10
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        # 官方默认 heading_command=True，保留；不需要时再关
+        self.commands.base_velocity.rel_standing_envs = 0.02
 
         # ==============================================================
         # 4. 动作
         # ==============================================================
-        # 动作用“关节位置增量”：策略输出 [-1,1]，乘 scale 加到默认关节角上。
-        # scale=0.25 表示一个动作单位最多让关节偏 0.25 rad。
-        self.actions.joint_pos.scale = 0.35
-        # 以 init_state 的默认关节角为基准（而不是 URDF 的零位）
+        # 官方人形 action scale 是 0.25
+        self.actions.joint_pos.scale = 0.25
         self.actions.joint_pos.use_default_offset = True
-        # 动作只给 12 个腿关节，手臂不参与策略输出
         self.actions.joint_pos.joint_names = LEG_JOINTS
 
         # ==============================================================
-        # 5. 奖励
+        # 5. 奖励：官方 G1/H1 风格
         # ==============================================================
-        # 速度跟踪：实际速度越接近命令速度，exp 奖励越接近 1
-        _set_weight(self.rewards, "track_lin_vel_xy_exp", 3.0)
-        _set_weight(self.rewards, "track_ang_vel_z_exp", 1.5)
-        # 抑制上下跳、横滚/俯仰角速度
-        _set_weight(self.rewards, "lin_vel_z_l2", -2.0)
-        _set_weight(self.rewards, "ang_vel_xy_l2", -0.05)
-        # 机身保持水平
-        _set_weight(self.rewards, "flat_orientation_l2", -5.0)
-        # 省力、平滑
-        _set_weight(self.rewards, "joint_torques_l2", -2.5e-5)
-        _set_weight(self.rewards, "joint_acc_l2", -1e-8)
-        _set_weight(self.rewards, "action_rate_l2", -0.02)
-        # 足端腾空时间：鼓励迈步；跑步时自然鼓励腾空
-        _set_weight(self.rewards, "feet_air_time", 10.0)
-        # 足端滑动：脚在地上蹭要扣分
-        _set_weight(self.rewards, "feet_slide", -0.05)
-        # 非足端着地（比如膝盖、基座）
-        _set_weight(self.rewards, "undesired_contacts", -0.5)
-        # 回合终止惩罚
-        _set_weight(self.rewards, "is_terminated", -2.0)
-        # 平地没有高度扫描，base_height_l2 依赖地形射线，先关掉
-        _set_weight(self.rewards, "base_height_l2", 0.0)
+        # 摔倒惩罚非常重：-200
+        self.rewards.termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
 
-        # ==============================================================
-        # 6. 把奖励项绑定到 T800 的足端
-        # ==============================================================
-        # feet_air_time / feet_slide 在基类里默认引用 "foot" 之类的 body，
-        # T800 的足端 body 名字是 LINK_FOOT_L / LINK_FOOT_R，要改过来。
-        # 接触力实际落在 LINK_FOOT_L/R（脚底碰撞盒），
-        # 绑脚而不是踝，feet_air_time 才会在离地/着地时正确重置。
-        feet = ["LINK_FOOT_L", "LINK_FOOT_R"]
-        if hasattr(self.rewards, "feet_air_time"):
-            # 0.15 秒对 T800 早期小步仍然太高，落地时 (air_time - 0.15)
-            # 是负数，等于惩罚抬脚。降到 0.02 秒，抬一点就能拿正奖励。
-            self.rewards.feet_air_time.params["threshold"] = 0.0
-            if "sensor_cfg" in self.rewards.feet_air_time.params:
-                self.rewards.feet_air_time.params["sensor_cfg"].body_names = feet
-        if hasattr(self.rewards, "feet_slide"):
-            if "sensor_cfg" in self.rewards.feet_slide.params:
-                self.rewards.feet_slide.params["sensor_cfg"].body_names = feet
-            if "asset_cfg" in self.rewards.feet_slide.params:
-                self.rewards.feet_slide.params["asset_cfg"].body_names = feet
-        if hasattr(self.rewards, "undesired_contacts"):
-            if "sensor_cfg" in self.rewards.undesired_contacts.params:
-                self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["LINK_BASE"]
+        # 线速度跟踪：用 yaw frame，官方 G1/H1 都是这个
+        self.rewards.track_lin_vel_xy_exp.func = mdp.track_lin_vel_xy_yaw_frame_exp
+        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        self.rewards.track_lin_vel_xy_exp.params = {
+            "command_name": "base_velocity",
+            "std": 0.5,
+        }
 
-        # 单脚支撑奖励：移动时只允许一只脚着地，逼它交替迈步
-        self.rewards.single_support = RewardTermCfg(
-            func=single_support,
-            weight=2.0,
-            params={
-                "sensor_cfg": SceneEntityCfg(
-                    "contact_forces", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]
-                ),
-                "command_name": "base_velocity",
-                "threshold": 1.0,
-                "min_speed": 0.1,
-            },
+        # 角速度跟踪：用 world frame
+        self.rewards.track_ang_vel_z_exp.func = mdp.track_ang_vel_z_world_exp
+        self.rewards.track_ang_vel_z_exp.weight = 1.5
+        self.rewards.track_ang_vel_z_exp.params = {
+            "command_name": "base_velocity",
+            "std": 0.5,
+        }
+
+        # 双足步态奖励：单脚支撑 + command>0.1 才有分，短步不会被扣
+        self.rewards.feet_air_time.func = mdp.feet_air_time_positive_biped
+        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.feet_air_time.params = {
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
+            "threshold": 0.4,
+        }
+
+        # 足端滑动惩罚
+        self.rewards.feet_slide.func = mdp.feet_slide
+        self.rewards.feet_slide.weight = -0.1
+        self.rewards.feet_slide.params = {
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
+            "asset_cfg": SceneEntityCfg("robot", body_names=FEET),
+        }
+
+        # 姿态/平滑/省力
+        self.rewards.flat_orientation_l2.weight = -1.0
+        self.rewards.lin_vel_z_l2 = None
+        self.rewards.undesired_contacts = None
+        self.rewards.base_height_l2.weight = 0.0
+        self.rewards.action_rate_l2.weight = -0.005
+        self.rewards.ang_vel_xy_l2.weight = -0.05
+
+        # 力矩/加速度惩罚只作用于腿
+        self.rewards.dof_torques_l2.weight = -1.5e-7
+        self.rewards.dof_torques_l2.params["asset_cfg"] = SceneEntityCfg(
+            "robot", joint_names=[".*HIP_.*", ".*KNEE_.*", ".*ANKLE_.*"]
+        )
+        self.rewards.dof_acc_l2.weight = -1.25e-7
+        self.rewards.dof_acc_l2.params["asset_cfg"] = SceneEntityCfg(
+            "robot", joint_names=[".*HIP_.*", ".*KNEE_.*"]
         )
 
-        # 惩罚双脚同时着地 / 同时离地，逼它保持单脚支撑
-        for mode, weight in (("double", -2.0), ("flight", -1.0)):
-            setattr(
-                self.rewards,
-                f"{mode}_support_penalty",
-                RewardTermCfg(
-                    func=contact_count_penalty,
-                    weight=weight,
-                    params={
-                        "sensor_cfg": SceneEntityCfg(
-                            "contact_forces", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]
-                        ),
-                        "command_name": "base_velocity",
-                        "mode": mode,
-                        "threshold": 1.0,
-                        "min_speed": 0.1,
-                    },
-                ),
-            )
+        # 踝关节限位
+        self.rewards.dof_pos_limits.weight = -1.0
+        self.rewards.dof_pos_limits.params["asset_cfg"] = SceneEntityCfg(
+            "robot", joint_names=[".*ANKLE_.*"]
+        )
 
-        # 抬脚高度奖励：脚离地 6cm 以上就开始给分
-        self.rewards.foot_clearance = RewardTermCfg(
-            func=foot_clearance,
-            weight=3.0,
-            params={
-                "asset_cfg": SceneEntityCfg("robot", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]),
-                "min_height": 0.06,
-                "max_height": 0.12,
-            },
+        # 关节偏离惩罚：髋 yaw/roll、手臂、躯干
+        self.rewards.joint_deviation_hip = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.1,
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*HIP_YAW.*", ".*HIP_ROLL.*"])},
+        )
+        self.rewards.joint_deviation_arms = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.1,
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*SHOULDER.*", ".*ELBOW.*"])},
+        )
+        self.rewards.joint_deviation_torso = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.1,
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*TORSO.*"])},
         )
 
         # ==============================================================
-        # 6.5 基座随机化事件
+        # 6. 随机化：照搬 G1/H1，训练早期先关掉
         # ==============================================================
-        # 官方配置里基座 body 叫 "base"，T800 叫 LINK_BASE；
-        # 不改的话 Isaac Lab 会报 "Not all regular expressions are matched: base"。
-        for event_name in ("add_base_mass", "base_com", "base_external_force_torque"):
-            if hasattr(self.events, event_name):
-                event = getattr(self.events, event_name)
-                if "asset_cfg" in event.params:
-                    event.params["asset_cfg"].body_names = ["LINK_BASE"]
+        self.events.push_robot = None
+        self.events.add_base_mass = None
+        self.events.base_com = None
+        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
+        self.events.reset_base.params = {
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "velocity_range": {
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            },
+        }
+        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["LINK_BASE"]
 
         # ==============================================================
-        # 6.6 reset 时不要扭得太狠
+        # 7. 终止条件：基座着地
         # ==============================================================
-        # 官方默认按 0.5~1.5 倍缩放默认关节角，T800 的膝盖/髋会一开始就歪，
-        # 直接导致还没学就走不稳。先缩到 0.9~1.1。
-        if hasattr(self.events, "reset_robot_joints"):
-            if "position_range" in self.events.reset_robot_joints.params:
-                self.events.reset_robot_joints.params["position_range"] = (0.95, 1.05)
-            if "velocity_range" in self.events.reset_robot_joints.params:
-                self.events.reset_robot_joints.params["velocity_range"] = (0.0, 0.0)
-
-        # reset 时不要把机器人推得太狠，否则零动作也会滑倒。
-        if hasattr(self.events, "reset_base"):
-            self.events.reset_base.params["pose_range"] = {
-                "x": (-0.03, 0.03),
-                "y": (-0.03, 0.03),
-                "yaw": (-0.2, 0.2),
-            }
-            self.events.reset_base.params["velocity_range"] = {
-                "x": (-0.05, 0.05),
-                "y": (-0.05, 0.05),
-                "z": (-0.05, 0.05),
-                "roll": (-0.05, 0.05),
-                "pitch": (-0.05, 0.05),
-                "yaw": (-0.05, 0.05),
-            }
-
-        # ==============================================================
-        # 6.7 摔倒惩罚
-        # ==============================================================
-        # 官方配置不一定有 is_terminated，先判断再加。
-        # 没有这项时，摔倒只是少拿未来奖励，PPO 可能觉得“倒下也无所谓”。
-        if not hasattr(self.rewards, "is_terminated"):
-            try:
-                # RewardTermCfg 已经在文件顶部 import，这里不要再 import，
-                # 否则 Python 会把它当成 __post_init__ 的局部变量。
-                import isaaclab.envs.mdp as mdp
-                self.rewards.is_terminated = RewardTermCfg(
-                    func=mdp.is_terminated,
-                    weight=-10.0,
-                )
-            except Exception as exc:
-                print(f"[警告] 添加 is_terminated 失败：{exc}")
-
-        # ==============================================================
-        # 7. 终止条件
-        # ==============================================================
-        # 基类里有 illegal_contact / base_contact（不同版本名字不同）。
-        # 只要基座着地，就认为摔倒，结束本回合。
         for term_name in ("illegal_contact", "base_contact"):
             if hasattr(self.terminations, term_name):
                 term = getattr(self.terminations, term_name)
@@ -378,11 +204,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
                     term.params["sensor_cfg"].body_names = ["LINK_BASE"]
                 if "threshold" in term.params:
                     term.params["threshold"] = 1.0
-        # 身体倾斜超过 0.8 rad（约 46°）也终止
         if hasattr(self.terminations, "bad_orientation"):
             self.terminations.bad_orientation.params["limit_angle"] = 0.8
 
-        # ==============================================================
-        # 8. 回合长度
-        # ==============================================================
         self.episode_length_s = 20.0

@@ -41,13 +41,13 @@ class T800PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
 
     # 总共训练多少轮（iteration）。一轮 ≈ 收集一次数据 + 更新一次网络。
-    max_iterations = 10000
+    max_iterations = 3000
 
     # 每多少轮保存一次模型
-    save_interval = 100
+    save_interval = 50
 
     # 日志 / 模型保存的子目录名
-    experiment_name = "t800_locomotion"
+    experiment_name = "t800_g1style"
 
     # 是否对观测做 running mean/std 归一化。
     # 这里交给 Isaac Lab / rsl_rl 的默认处理，关闭额外的经验归一化。
@@ -61,7 +61,7 @@ class T800PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     # ==============================================================
     policy = RslRlPpoActorCriticCfg(
         # 初始探索噪声标准差。1.0 表示动作一开始比较随机，鼓励探索。
-        init_noise_std=0.5,
+        init_noise_std=1.0,
         # 噪声用 log 形式存储（更稳定）
         noise_std_type="log",
         # actor：输入观测，输出动作均值；三层 MLP
@@ -83,7 +83,7 @@ class T800PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         # PPO 的 clip 范围：新策略概率 / 旧策略概率限制在 [0.8, 1.2]
         clip_param=0.2,
         # 熵奖励系数：越大越鼓励探索
-        entropy_coef=0.005,
+        entropy_coef=0.008,
         # 同一批数据重复训练几轮
         num_learning_epochs=5,
         # 每轮把数据分成几个 mini-batch
