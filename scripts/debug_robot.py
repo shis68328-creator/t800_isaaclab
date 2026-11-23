@@ -72,6 +72,20 @@ def main():
     for i in range(args_cli.steps):
         obs, rew, terminated, truncated, info = env.step(actions)
 
+        if i in (0, 10, 20, 30):
+            if hasattr(robot.data, "joint_pos_target"):
+                target = robot.data.joint_pos_target[0].cpu().numpy()
+                print(f"[target step {i}]", target.round(3))
+            err = (robot.data.joint_pos[0] - robot.data.default_joint_pos[0]).abs()
+            top = err.topk(5)
+            print(
+                f"[top joint err step {i}] "
+                + ", ".join(
+                    f"{robot.joint_names[j]}={err[j].item():.3f}"
+                    for j in top.indices.tolist()
+                )
+            )
+
         if i % 10 == 0 or bool(terminated.any()) or bool(truncated.any()):
             root_z = robot.data.root_pos_w[0, 2].item()
             max_torque = (
