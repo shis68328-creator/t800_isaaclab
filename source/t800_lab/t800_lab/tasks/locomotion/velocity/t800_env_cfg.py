@@ -163,7 +163,9 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # feet_air_time / feet_slide 在基类里默认引用 "foot" 之类的 body，
         # T800 的足端 body 名字是 LINK_FOOT_L / LINK_FOOT_R，要改过来。
-        feet = ["LINK_FOOT_L", "LINK_FOOT_R"]
+        # 固定脚 link 的碰撞在 PhysX 里归到父 body（踝 roll），
+        # 所以接触/腾空奖励绑 LINK_ANKLE_ROLL_L/R 才收得到力。
+        feet = ["LINK_ANKLE_ROLL_L", "LINK_ANKLE_ROLL_R"]
         if hasattr(self.rewards, "feet_air_time"):
             self.rewards.feet_air_time.params["threshold"] = 0.5
             if "sensor_cfg" in self.rewards.feet_air_time.params:
@@ -195,9 +197,25 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 直接导致还没学就走不稳。先缩到 0.9~1.1。
         if hasattr(self.events, "reset_robot_joints"):
             if "position_range" in self.events.reset_robot_joints.params:
-                self.events.reset_robot_joints.params["position_range"] = (0.9, 1.1)
+                self.events.reset_robot_joints.params["position_range"] = (0.95, 1.05)
             if "velocity_range" in self.events.reset_robot_joints.params:
                 self.events.reset_robot_joints.params["velocity_range"] = (0.0, 0.0)
+
+        # reset 时不要把机器人推得太狠，否则零动作也会滑倒。
+        if hasattr(self.events, "reset_base"):
+            self.events.reset_base.params["pose_range"] = {
+                "x": (-0.03, 0.03),
+                "y": (-0.03, 0.03),
+                "yaw": (-0.2, 0.2),
+            }
+            self.events.reset_base.params["velocity_range"] = {
+                "x": (-0.05, 0.05),
+                "y": (-0.05, 0.05),
+                "z": (-0.05, 0.05),
+                "roll": (-0.05, 0.05),
+                "pitch": (-0.05, 0.05),
+                "yaw": (-0.05, 0.05),
+            }
 
         # ==============================================================
         # 6.7 摔倒惩罚

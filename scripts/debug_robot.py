@@ -58,7 +58,7 @@ def main():
     if hasattr(robot.data, "applied_torque"):
         print("applied_torque after reset:", robot.data.applied_torque[0].cpu().numpy())
 
-    foot_ids = [robot.body_names.index("LINK_FOOT_L"), robot.body_names.index("LINK_FOOT_R")]
+    foot_ids = [robot.body_names.index("LINK_ANKLE_ROLL_L"), robot.body_names.index("LINK_ANKLE_ROLL_R")]
     base_id = robot.body_names.index("LINK_BASE")
     print("foot body ids:", foot_ids)
 

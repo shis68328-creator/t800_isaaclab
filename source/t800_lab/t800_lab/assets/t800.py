@@ -114,7 +114,7 @@ T800_CFG = ArticulationCfg(
 
     # ---- 3.2 初始状态 ----
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.03),  # 基座初始位置：离地 1.03 m
+        pos=(0.0, 0.0, 1.055),  # 基座初始位置：离地 1.03 m
         joint_pos=DEFAULT_JOINT_POS,  # 25 个关节的初始角
         joint_vel={".*": 0.0},        # 所有关节初始速度为 0
     ),
