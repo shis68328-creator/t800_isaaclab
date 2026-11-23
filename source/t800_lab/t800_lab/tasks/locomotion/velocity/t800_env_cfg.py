@@ -178,9 +178,9 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # feet_air_time / feet_slide 在基类里默认引用 "foot" 之类的 body，
         # T800 的足端 body 名字是 LINK_FOOT_L / LINK_FOOT_R，要改过来。
-        # 固定脚 link 的碰撞在 PhysX 里归到父 body（踝 roll），
-        # 所以接触/腾空奖励绑 LINK_ANKLE_ROLL_L/R 才收得到力。
-        feet = ["LINK_ANKLE_ROLL_L", "LINK_ANKLE_ROLL_R"]
+        # 接触力实际落在 LINK_FOOT_L/R（脚底碰撞盒），
+        # 绑脚而不是踝，feet_air_time 才会在离地/着地时正确重置。
+        feet = ["LINK_FOOT_L", "LINK_FOOT_R"]
         if hasattr(self.rewards, "feet_air_time"):
             # 0.5 秒对早期小步太长，几乎拿不到奖励；降到 0.15 秒
             self.rewards.feet_air_time.params["threshold"] = 0.15
