@@ -174,6 +174,17 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
                 self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["LINK_BASE"]
 
         # ==============================================================
+        # 6.5 基座随机化事件
+        # ==============================================================
+        # 官方配置里基座 body 叫 "base"，T800 叫 LINK_BASE；
+        # 不改的话 Isaac Lab 会报 "Not all regular expressions are matched: base"。
+        for event_name in ("add_base_mass", "base_com", "base_external_force_torque"):
+            if hasattr(self.events, event_name):
+                event = getattr(self.events, event_name)
+                if "asset_cfg" in event.params:
+                    event.params["asset_cfg"].body_names = ["LINK_BASE"]
+
+        # ==============================================================
         # 7. 终止条件
         # ==============================================================
         # 基类里有 illegal_contact / base_contact（不同版本名字不同）。
