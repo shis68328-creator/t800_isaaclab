@@ -61,7 +61,7 @@ class T800PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     # ==============================================================
     policy = RslRlPpoActorCriticCfg(
         # 初始探索噪声标准差。1.0 表示动作一开始比较随机，鼓励探索。
-        init_noise_std=1.0,
+        init_noise_std=0.5,
         # 噪声用 log 形式存储（更稳定）
         noise_std_type="log",
         # actor：输入观测，输出动作均值；三层 MLP

@@ -115,9 +115,13 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # 每个 episode 会随机采样一个目标速度，写进观测的 command 项。
         # vx 范围 -0.5 ~ 2.5：负值后退，0 站立，1 左右走路，2 以上跑。
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.5)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        # 先学站立/慢走，不要一上来就给 2.5 m/s。
+        # 稳定后再把 lin_vel_x 放开到 2.0~2.5。
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 0.8)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        # 15% 的环境给 0 速度，专门练站立
+        self.commands.base_velocity.rel_standing_envs = 0.15
 
         # ==============================================================
         # 4. 动作
@@ -183,6 +187,33 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
                 event = getattr(self.events, event_name)
                 if "asset_cfg" in event.params:
                     event.params["asset_cfg"].body_names = ["LINK_BASE"]
+
+        # ==============================================================
+        # 6.6 reset 时不要扭得太狠
+        # ==============================================================
+        # 官方默认按 0.5~1.5 倍缩放默认关节角，T800 的膝盖/髋会一开始就歪，
+        # 直接导致还没学就走不稳。先缩到 0.9~1.1。
+        if hasattr(self.events, "reset_robot_joints"):
+            if "position_range" in self.events.reset_robot_joints.params:
+                self.events.reset_robot_joints.params["position_range"] = (0.9, 1.1)
+            if "velocity_range" in self.events.reset_robot_joints.params:
+                self.events.reset_robot_joints.params["velocity_range"] = (0.0, 0.0)
+
+        # ==============================================================
+        # 6.7 摔倒惩罚
+        # ==============================================================
+        # 官方配置不一定有 is_terminated，先判断再加。
+        # 没有这项时，摔倒只是少拿未来奖励，PPO 可能觉得“倒下也无所谓”。
+        if not hasattr(self.rewards, "is_terminated"):
+            try:
+                from isaaclab.managers import RewardTermCfg
+                import isaaclab.envs.mdp as mdp
+                self.rewards.is_terminated = RewardTermCfg(
+                    func=mdp.is_terminated,
+                    weight=-2.0,
+                )
+            except Exception as exc:
+                print(f"[警告] 添加 is_terminated 失败：{exc}")
 
         # ==============================================================
         # 7. 终止条件
