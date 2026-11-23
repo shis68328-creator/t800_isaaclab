@@ -42,6 +42,15 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import (
 
 from t800_lab.assets.t800 import T800_CFG
 
+# 只让策略控制 12 个腿关节；手臂/躯干/头保持默认角。
+# 早期训练时手臂乱甩会明显干扰平衡。
+LEG_JOINTS = [
+    "J00_HIP_PITCH_L", "J01_HIP_ROLL_L", "J02_HIP_YAW_L",
+    "J03_KNEE_PITCH_L", "J04_ANKLE_PITCH_L", "J05_ANKLE_ROLL_L",
+    "J06_HIP_PITCH_R", "J07_HIP_ROLL_R", "J08_HIP_YAW_R",
+    "J09_KNEE_PITCH_R", "J10_ANKLE_PITCH_R", "J11_ANKLE_ROLL_R",
+]
+
 
 def _set_weight(rewards, name: str, value: float):
     """安全地修改某个奖励项的权重。
@@ -131,6 +140,8 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.actions.joint_pos.scale = 0.25
         # 以 init_state 的默认关节角为基准（而不是 URDF 的零位）
         self.actions.joint_pos.use_default_offset = True
+        # 动作只给 12 个腿关节，手臂不参与策略输出
+        self.actions.joint_pos.joint_names = LEG_JOINTS
 
         # ==============================================================
         # 5. 奖励

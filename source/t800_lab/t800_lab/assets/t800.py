@@ -132,20 +132,20 @@ T800_CFG = ArticulationCfg(
         # 髋 pitch、膝 pitch：承重关节，增益高
         "hip_pitch_knee": ImplicitActuatorCfg(
             joint_names_expr=[".*HIP_PITCH.*", ".*KNEE_PITCH.*"],
-            stiffness=180.0,
-            damping=5.0,
+            stiffness=300.0,
+            damping=10.0,
         ),
         # 髋 roll / yaw：中等增益
         "hip_roll_yaw": ImplicitActuatorCfg(
             joint_names_expr=[".*HIP_ROLL.*", ".*HIP_YAW.*"],
-            stiffness=100.0,
-            damping=3.0,
+            stiffness=180.0,
+            damping=6.0,
         ),
         # 踝关节：软一点，脚掌更容易贴地
         "ankle": ImplicitActuatorCfg(
             joint_names_expr=[".*ANKLE.*"],
-            stiffness=40.0,
-            damping=0.3,
+            stiffness=100.0,
+            damping=2.0,
         ),
         # 手臂
         "arm": ImplicitActuatorCfg(
