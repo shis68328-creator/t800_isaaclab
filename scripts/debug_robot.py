@@ -56,8 +56,12 @@ def main():
     base_id = robot.body_names.index("LINK_BASE")
     print("foot body ids:", foot_ids)
 
-    # 零动作 = 目标关节角等于默认站立角
-    actions = torch.zeros((1, env.action_space.shape[0]), device=env.unwrapped.device)
+    # 零动作 = 目标关节角等于默认站立角。
+    # 不要用 env.action_space.shape[0]：这个版本它是 (1, 25)，
+    # 取 [0] 会得到 1。用 action_manager.total_action_dim 最稳。
+    action_dim = env.unwrapped.action_manager.total_action_dim
+    print("action_dim:", action_dim)
+    actions = torch.zeros((1, action_dim), device=env.unwrapped.device)
 
     for i in range(args_cli.steps):
         obs, rew, terminated, truncated, info = env.step(actions)
