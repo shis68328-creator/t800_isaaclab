@@ -59,6 +59,12 @@ def main():
         print("applied_torque after reset:", robot.data.applied_torque[0].cpu().numpy())
 
     foot_ids = [robot.body_names.index("LINK_FOOT_L"), robot.body_names.index("LINK_FOOT_R")]
+    # air_time 要按 contact sensor 的 body 顺序取，不能混用 robot.body_names
+    sensor_foot_ids = [
+        sensor.body_names.index("LINK_FOOT_L"),
+        sensor.body_names.index("LINK_FOOT_R"),
+    ]
+    print("sensor foot ids:", sensor_foot_ids)
     base_id = robot.body_names.index("LINK_BASE")
     print("foot body ids:", foot_ids)
     print("sensor body names:", sensor.body_names)
@@ -116,7 +122,7 @@ def main():
             joint_err = (robot.data.joint_pos[0] - robot.data.default_joint_pos[0]).abs()
             max_err = joint_err.max().item()
             base_force = sensor.data.net_forces_w[0, base_id].norm().item()
-            air = sensor.data.current_air_time[0, foot_ids].cpu().numpy()
+            air = sensor.data.current_air_time[0, sensor_foot_ids].cpu().numpy()
             print(
                 f"step {i:3d}  root_z={root_z:.3f}  feet_z={feet_z.round(3)}  "
                 f"max_joint_err={max_err:.3f}  max_torque={max_torque:.1f}  base_force={base_force:.1f}  "
