@@ -1,5 +1,9 @@
+# Isaac Lab 扩展的元数据。
+# pip install -e source/t800_lab 时，setup.py 会读这里。
+
 [package]
 version = "0.1.0"
+# 扩展类型：isaaclab
 category = "isaaclab"
 readme = "README.md"
 title = "T800 Isaac Lab"
@@ -9,11 +13,15 @@ description = "T800 humanoid locomotion training with Isaac Lab"
 repository = "https://github.com/shis68328-creator/mujoco_t800"
 keywords = ["isaaclab", "t800", "humanoid", "locomotion"]
 
+# 依赖的 Isaac Lab 模块，{} 表示使用环境里的版本。
+# 这些包由 Isaac Lab 官方安装流程提供，不需要 pip 单独装。
 [dependencies]
 "isaaclab" = {}
 "isaaclab_assets" = {}
 "isaaclab_rl" = {}
 "isaaclab_tasks" = {}
 
+# 声明这个扩展包含哪个 Python 包。
+# 训练脚本里 import t800_lab 时，Python 会找这个包。
 [[python.module]]
 name = "t800_lab"
