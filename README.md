@@ -109,6 +109,9 @@ tensorboard --logdir logs/rsl_rl
 
 ## 代码导读
 
+- [docs/GLOSSARY.md](docs/GLOSSARY.md)：高中生版专业名词小抄
+
+
 第一次看这套代码，建议先读：
 
 - [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md)：包/类/术语速查、训练数据流、阅读顺序

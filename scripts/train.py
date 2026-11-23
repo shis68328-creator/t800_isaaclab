@@ -35,6 +35,9 @@ parse_env_cfg：
     根据任务 id 从 Gym 注册表取出环境配置，并按 num_envs/device 复制。
 load_cfg_from_registry：
     根据任务 id 取出 PPO 配置。
+
+
+看不懂名词时，先看 docs/GLOSSARY.md（高中生版术语表）。
 """
 
 import argparse

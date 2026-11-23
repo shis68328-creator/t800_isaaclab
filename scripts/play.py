@@ -20,6 +20,9 @@ OnPolicyRunner：
     用来加载 checkpoint，并取出推理策略。
 torch.inference_mode()：
     推理时关闭梯度，省显存。
+
+
+看不懂名词时，先看 docs/GLOSSARY.md（高中生版术语表）。
 """
 
 import argparse
