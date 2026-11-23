@@ -182,8 +182,9 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 绑脚而不是踝，feet_air_time 才会在离地/着地时正确重置。
         feet = ["LINK_FOOT_L", "LINK_FOOT_R"]
         if hasattr(self.rewards, "feet_air_time"):
-            # 0.5 秒对早期小步太长，几乎拿不到奖励；降到 0.15 秒
-            self.rewards.feet_air_time.params["threshold"] = 0.15
+            # 0.15 秒对 T800 早期小步仍然太高，落地时 (air_time - 0.15)
+            # 是负数，等于惩罚抬脚。降到 0.02 秒，抬一点就能拿正奖励。
+            self.rewards.feet_air_time.params["threshold"] = 0.02
             if "sensor_cfg" in self.rewards.feet_air_time.params:
                 self.rewards.feet_air_time.params["sensor_cfg"].body_names = feet
         if hasattr(self.rewards, "feet_slide"):
