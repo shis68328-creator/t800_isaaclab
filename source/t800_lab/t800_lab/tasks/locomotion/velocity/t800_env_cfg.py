@@ -139,7 +139,8 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.flat_orientation_l2.weight = -1.0
         self.rewards.lin_vel_z_l2 = None
         self.rewards.undesired_contacts = None
-        self.rewards.base_height_l2.weight = 0.0
+        if hasattr(self.rewards, "base_height_l2"):
+            self.rewards.base_height_l2.weight = 0.0
         self.rewards.action_rate_l2.weight = -0.005
         self.rewards.ang_vel_xy_l2.weight = -0.05
 
