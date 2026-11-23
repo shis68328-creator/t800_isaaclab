@@ -51,6 +51,12 @@ def main():
         print("joint_stiffness:", robot.data.joint_stiffness[0].cpu().numpy())
     if hasattr(robot.data, "joint_damping"):
         print("joint_damping:", robot.data.joint_damping[0].cpu().numpy())
+    if hasattr(robot.data, "joint_effort_limits"):
+        print("joint_effort_limits:", robot.data.joint_effort_limits[0].cpu().numpy())
+    if hasattr(robot.data, "joint_pos_target"):
+        print("joint_pos_target after reset:", robot.data.joint_pos_target[0].cpu().numpy())
+    if hasattr(robot.data, "applied_torque"):
+        print("applied_torque after reset:", robot.data.applied_torque[0].cpu().numpy())
 
     foot_ids = [robot.body_names.index("LINK_FOOT_L"), robot.body_names.index("LINK_FOOT_R")]
     base_id = robot.body_names.index("LINK_BASE")
@@ -68,6 +74,11 @@ def main():
 
         if i % 10 == 0 or bool(terminated.any()) or bool(truncated.any()):
             root_z = robot.data.root_pos_w[0, 2].item()
+            max_torque = (
+                robot.data.applied_torque[0].abs().max().item()
+                if hasattr(robot.data, "applied_torque")
+                else float("nan")
+            )
             feet_z = robot.data.body_pos_w[0, foot_ids, 2].cpu().numpy()
             joint_err = (robot.data.joint_pos[0] - robot.data.default_joint_pos[0]).abs()
             max_err = joint_err.max().item()
@@ -75,7 +86,7 @@ def main():
             air = sensor.data.current_air_time[0, foot_ids].cpu().numpy()
             print(
                 f"step {i:3d}  root_z={root_z:.3f}  feet_z={feet_z.round(3)}  "
-                f"max_joint_err={max_err:.3f}  base_force={base_force:.1f}  "
+                f"max_joint_err={max_err:.3f}  max_torque={max_torque:.1f}  base_force={base_force:.1f}  "
                 f"foot_air={air.round(3)}  rew={rew.item():.3f}  "
                 f"term={bool(terminated.any())}"
             )
