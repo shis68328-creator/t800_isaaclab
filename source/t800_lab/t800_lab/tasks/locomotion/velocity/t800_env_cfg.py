@@ -80,11 +80,14 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # 3. 速度指令（照搬 G1/H1）
         # ==============================================================
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
+        # 不允许“站着不动”：速度下限 0.2，且不给 0 速度样本
+        self.commands.base_velocity.ranges.lin_vel_x = (0.2, 0.8)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
-        # 官方默认 heading_command=True，保留；不需要时再关
-        self.commands.base_velocity.rel_standing_envs = 0.02
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        # 先只学直走，不学随机朝向
+        self.commands.base_velocity.heading_command = False
+        self.commands.base_velocity.rel_heading_envs = 0.0
+        self.commands.base_velocity.rel_standing_envs = 0.0
 
         # ==============================================================
         # 4. 动作
@@ -98,11 +101,13 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 5. 奖励：官方 G1/H1 风格
         # ==============================================================
         # 摔倒惩罚非常重：-200
-        self.rewards.termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
+        # -200 太强，策略会为了不摔而站着不动；先降到 -100
+        self.rewards.termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
 
         # 线速度跟踪：用 yaw frame，官方 G1/H1 都是这个
         self.rewards.track_lin_vel_xy_exp.func = mdp.track_lin_vel_xy_yaw_frame_exp
-        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        # 站着不动会拿不到速度奖励，逼它往前走
+        self.rewards.track_lin_vel_xy_exp.weight = 3.0
         self.rewards.track_lin_vel_xy_exp.params = {
             "command_name": "base_velocity",
             "std": 0.5,
@@ -110,7 +115,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # 角速度跟踪：用 world frame
         self.rewards.track_ang_vel_z_exp.func = mdp.track_ang_vel_z_world_exp
-        self.rewards.track_ang_vel_z_exp.weight = 1.5
+        self.rewards.track_ang_vel_z_exp.weight = 2.0
         self.rewards.track_ang_vel_z_exp.params = {
             "command_name": "base_velocity",
             "std": 0.5,
@@ -118,7 +123,8 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # 双足步态奖励：单脚支撑 + command>0.1 才有分，短步不会被扣
         self.rewards.feet_air_time.func = mdp.feet_air_time_positive_biped
-        self.rewards.feet_air_time.weight = 0.25
+        # 官方 0.25 对 T800 太弱，加一点，鼓励抬脚
+        self.rewards.feet_air_time.weight = 1.0
         self.rewards.feet_air_time.params = {
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=FEET),
@@ -187,7 +193,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.events.base_com = None
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.events.reset_base.params = {
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.2, 0.2), "y": (-0.2, 0.2), "yaw": (-0.2, 0.2)},
             "velocity_range": {
                 "x": (0.0, 0.0),
                 "y": (0.0, 0.0),
