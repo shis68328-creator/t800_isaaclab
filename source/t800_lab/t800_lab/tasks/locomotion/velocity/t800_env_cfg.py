@@ -126,11 +126,15 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # vx 范围 -0.5 ~ 2.5：负值后退，0 站立，1 左右走路，2 以上跑。
         # 先学站立/慢走，不要一上来就给 2.5 m/s。
         # 稳定后再把 lin_vel_x 放开到 2.0~2.5。
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 0.8)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
-        # 15% 的环境给 0 速度，专门练站立
-        self.commands.base_velocity.rel_standing_envs = 0.15
+        # 先只学小步直走：速度低、不随机转向。
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.5)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.1, 0.1)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.2, 0.2)
+        # 关掉“随机朝向”任务，否则它还要同时学分转向
+        self.commands.base_velocity.heading_command = False
+        self.commands.base_velocity.rel_heading_envs = 0.0
+        # 10% 的环境给 0 速度，保留站立样本
+        self.commands.base_velocity.rel_standing_envs = 0.10
 
         # ==============================================================
         # 4. 动作
@@ -178,7 +182,8 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 所以接触/腾空奖励绑 LINK_ANKLE_ROLL_L/R 才收得到力。
         feet = ["LINK_ANKLE_ROLL_L", "LINK_ANKLE_ROLL_R"]
         if hasattr(self.rewards, "feet_air_time"):
-            self.rewards.feet_air_time.params["threshold"] = 0.5
+            # 0.5 秒对早期小步太长，几乎拿不到奖励；降到 0.15 秒
+            self.rewards.feet_air_time.params["threshold"] = 0.15
             if "sensor_cfg" in self.rewards.feet_air_time.params:
                 self.rewards.feet_air_time.params["sensor_cfg"].body_names = feet
         if hasattr(self.rewards, "feet_slide"):
@@ -239,7 +244,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
                 import isaaclab.envs.mdp as mdp
                 self.rewards.is_terminated = RewardTermCfg(
                     func=mdp.is_terminated,
-                    weight=-2.0,
+                    weight=-10.0,
                 )
             except Exception as exc:
                 print(f"[警告] 添加 is_terminated 失败：{exc}")
