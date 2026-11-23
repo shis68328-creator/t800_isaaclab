@@ -155,7 +155,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # ==============================================================
         # 动作用“关节位置增量”：策略输出 [-1,1]，乘 scale 加到默认关节角上。
         # scale=0.25 表示一个动作单位最多让关节偏 0.25 rad。
-        self.actions.joint_pos.scale = 0.35
+        self.actions.joint_pos.scale = 0.30
         # 以 init_state 的默认关节角为基准（而不是 URDF 的零位）
         self.actions.joint_pos.use_default_offset = True
         # 动作只给 12 个腿关节，手臂不参与策略输出
@@ -213,7 +213,7 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 抬脚高度奖励：脚离地 6cm 以上就开始给分
         self.rewards.foot_clearance = RewardTermCfg(
             func=foot_clearance,
-            weight=3.0,
+            weight=1.5,
             params={
                 "asset_cfg": SceneEntityCfg("robot", body_names=["LINK_FOOT_L", "LINK_FOOT_R"]),
                 "min_height": 0.06,
