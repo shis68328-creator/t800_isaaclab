@@ -1,3 +1,14 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   isaaclab.sim: USD/刚体/关节体配置
+#       sim_utils.UsdFileCfg(usd_path="t800.usd")
+#   ArticulationCfg: 机器人整体配置
+#       robot = ArticulationCfg(spawn=..., init_state=..., actuators=...)
+#   ImplicitActuatorCfg: 隐式 PD
+#       ImplicitActuatorCfg(joint_names_expr=[".*KNEE.*"], stiffness=180, damping=5)
+#   pathlib.Path: 拼 t800.usd 路径
+# ==============================================================================
+
 """T800 在 Isaac Lab 里的“机器人配置”。
 
 ======================================================================

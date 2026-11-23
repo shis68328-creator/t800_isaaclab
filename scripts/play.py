@@ -1,3 +1,14 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   argparse: 读 --task / --checkpoint / --num_envs
+#   glob: 找最新的 .pt
+#       glob.glob("logs/**/*.pt", recursive=True)
+#   AppLauncher: 启动 Isaac Sim
+#   gymnasium: 创建环境
+#   rsl_rl.OnPolicyRunner: 加载 checkpoint 并取推理策略
+#       runner.load(checkpoint); policy = runner.get_inference_policy()
+# ==============================================================================
+
 """T800 Isaac Lab 回放脚本。
 
 ======================================================================

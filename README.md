@@ -110,6 +110,7 @@ tensorboard --logdir logs/rsl_rl
 ## 代码导读
 
 - [docs/GLOSSARY.md](docs/GLOSSARY.md)：高中生版专业名词小抄
+- [docs/LIBRARIES.md](docs/LIBRARIES.md)：代码里用到的库和方法小例子
 
 
 第一次看这套代码，建议先读：

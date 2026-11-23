@@ -1,9 +1,16 @@
-# 在 Isaac Lab 的 conda 环境里安装本文件。
+# ==============================================================================
+# requirements.txt 是什么
+# ==============================================================================
+# pip 会读这个文件，把里面列的包一个个安装。
+# 写法：
+#   包名>=版本      例如 psutil>=5.9
+#   # 开头是注释
+#
 # 注意：不要用 pip 安装 isaaclab / isaacsim / torch / rsl-rl-lib，
 #       它们必须由 Isaac Lab 官方安装流程提供，版本要互相匹配。
 #
 # 使用：
-#   conda activate Isaaclab
+#   conda activate isaaclab
 #   pip install -r requirements.txt
 #   pip install -e source/t800_lab
 

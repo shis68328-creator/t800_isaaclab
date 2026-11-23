@@ -1,3 +1,14 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   importlib.metadata: 查 pip 包版本，不 import 模块
+#       md.version("torch")
+#   importlib.util.find_spec: 查模块路径，不执行模块
+#       importlib.util.find_spec("isaaclab")
+#   subprocess: 调用 nvidia-smi
+#       subprocess.check_output(["nvidia-smi"], text=True)
+#   pathlib.Path: 判断 URDF/USD 是否存在
+# ==============================================================================
+
 """检查 Isaac Lab 的 conda 环境是否满足 T800 训练要求。
 
 ======================================================================

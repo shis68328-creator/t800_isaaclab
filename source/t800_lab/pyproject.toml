@@ -1,6 +1,24 @@
+# ==============================================================================
+# pyproject.toml 是什么
+# ==============================================================================
+# 这是 Python 的“构建配置文件”。
+# pip install -e 时，pip 会先读这里，建一个隔离的构建环境。
+#
+# TOML 语法：
+#   [section]          一个段落
+#   key = "value"      字符串
+#   key = ["a", "b"]   数组
+#   key = {...}        内联表
+# ==============================================================================
+
 [build-system]
 # pip install -e 时，pip 会先建一个隔离的构建环境。
 # setup.py 里 import 了 toml 来读 config/extension.toml，
 # 所以构建环境也必须装 toml，否则会报 ModuleNotFoundError。
+#
+# requires 里写构建阶段需要的包：
+#   setuptools：打包工具
+#   toml：读 extension.toml
 requires = ["setuptools>=61", "toml>=0.10"]
+# 用 setuptools 的标准构建后端
 build-backend = "setuptools.build_meta"

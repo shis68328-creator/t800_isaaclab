@@ -1,3 +1,9 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   configclass: 配置类
+#   RslRlOnPolicyRunnerCfg / RslRlPpoActorCriticCfg / RslRlPpoAlgorithmCfg
+# ==============================================================================
+
 """T800 Mimic 的 PPO 配置。"""
 
 from isaaclab.utils import configclass

@@ -1,3 +1,16 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   argparse: 读 --task / --num_envs / --resume
+#       parser.add_argument("--num_envs", type=int, default=4096)
+#   AppLauncher: 启动 Isaac Sim
+#       app = AppLauncher(args).app
+#   gymnasium: 创建环境
+#       env = gym.make("Isaac-T800-Mimic-v0", cfg=env_cfg)
+#   rsl_rl.runners.OnPolicyRunner: PPO 训练器
+#       runner = OnPolicyRunner(env, cfg, log_dir, device)
+#   pathlib.Path: 拼日志/模型路径
+# ==============================================================================
+
 """T800 Isaac Lab 训练入口。
 
 ======================================================================

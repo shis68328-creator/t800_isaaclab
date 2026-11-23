@@ -1,5 +1,16 @@
-# Isaac Lab 扩展的元数据。
+# ==============================================================================
+# extension.toml 是什么
+# ==============================================================================
+# Isaac Lab 扩展的元数据（名字、版本、作者、依赖）。
 # pip install -e source/t800_lab 时，setup.py 会读这里。
+#
+# TOML 语法：
+#   [package]               一个段落
+#   key = "value"           字符串
+#   key = ["a", "b"]        数组
+#   "isaaclab" = {}         空表，表示“用环境里的版本”
+#   [[python.module]]       表数组，可以有多个
+# ==============================================================================
 
 [package]
 version = "0.1.0"
@@ -10,8 +21,8 @@ title = "T800 Isaac Lab"
 author = "akihisa"
 maintainer = "akihisa"
 description = "T800 humanoid locomotion training with Isaac Lab"
-repository = "https://github.com/shis68328-creator/mujoco_t800"
-keywords = ["isaaclab", "t800", "humanoid", "locomotion"]
+repository = "https://github.com/shis68328-creator/t800_isaaclab"
+keywords = ["isaaclab", "t800", "humanoid", "locomotion", "mimic"]
 
 # 依赖的 Isaac Lab 模块，{} 表示使用环境里的版本。
 # 这些包由 Isaac Lab 官方安装流程提供，不需要 pip 单独装。

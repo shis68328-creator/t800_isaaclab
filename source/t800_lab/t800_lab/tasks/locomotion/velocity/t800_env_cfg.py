@@ -1,3 +1,13 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   configclass: 写配置类
+#   isaaclab.managers: RewardTermCfg / SceneEntityCfg
+#   TerrainImporterCfg: 平地/崎岖地形
+#       TerrainImporterCfg(terrain_type="plane")
+#   isaaclab.managers: 奖励项
+#       RewTerm(func=mdp.feet_air_time_positive_biped, weight=0.25)
+# ==============================================================================
+
 """T800 的速度跟踪环境配置（G1/H1 官方 reward 风格）。
 
 ======================================================================

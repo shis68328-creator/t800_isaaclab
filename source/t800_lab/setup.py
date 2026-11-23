@@ -1,3 +1,12 @@
+# ==============================================================================
+# 本文件用到的库（小例子见 docs/LIBRARIES.md）
+#   setuptools.setup: 安装入口
+#       setup(name="t800_lab", packages=find_packages())
+#   setuptools.find_packages: 自动找子包
+#   toml.load: 读 config/extension.toml
+#       meta = toml.load("config/extension.toml")
+# ==============================================================================
+
 """安装 t800_lab 扩展。
 
 ======================================================================
