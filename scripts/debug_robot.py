@@ -72,6 +72,23 @@ def main():
     for i in range(args_cli.steps):
         obs, rew, terminated, truncated, info = env.step(actions)
 
+        if i in (0, 20, 40, 60):
+            forces = sensor.data.net_forces_w
+            print("net_forces_w shape:", tuple(forces.shape))
+            if forces.dim() == 4:
+                force_now = forces[0, -1]
+            else:
+                force_now = forces[0]
+            norms = force_now.norm(dim=-1)
+            top = norms.topk(min(5, norms.numel()))
+            print(
+                f"[contact step {i}] "
+                + ", ".join(
+                    f"{robot.body_names[j]}={norms[j].item():.1f}N"
+                    for j in top.indices.tolist()
+                )
+            )
+
         if i in (0, 10, 20, 30):
             if hasattr(robot.data, "joint_pos_target"):
                 target = robot.data.joint_pos_target[0].cpu().numpy()
