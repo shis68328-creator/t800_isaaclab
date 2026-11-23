@@ -96,6 +96,7 @@ torch.backends.cudnn.benchmark = False
 
 
 def main():
+    print("[DEBUG] enter main", flush=True)
     # --------------------------------------------------------------
     # 4. 读取环境配置
     # --------------------------------------------------------------
@@ -109,11 +110,13 @@ def main():
         num_envs=args_cli.num_envs,
     )
     env_cfg.seed = args_cli.seed
+    print("[DEBUG] after parse_env_cfg", flush=True)
 
     # --------------------------------------------------------------
     # 5. 读取 PPO 配置
     # --------------------------------------------------------------
     agent_cfg = load_cfg_from_registry(args_cli.task, "rsl_rl_cfg_entry_point")
+    print("[DEBUG] after load_cfg_from_registry", flush=True)
     agent_cfg.device = args_cli.device
     agent_cfg.seed = args_cli.seed
     if args_cli.max_iterations is not None:
@@ -140,11 +143,14 @@ def main():
     # --------------------------------------------------------------
     # gym.make 会调用注册时指定的 entry_point（ManagerBasedRLEnv），
     # 并把 env_cfg 传进去。
+    print("[DEBUG] before gym.make", flush=True)
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
+    print("[DEBUG] after gym.make", flush=True)
 
     # rsl_rl 需要“向量环境”接口：一次 step 返回 num_envs 个结果。
     # clip_actions 会把策略输出裁剪到 [-100, 100]。
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    print("[DEBUG] after RslRlVecEnvWrapper", flush=True)
 
     # --------------------------------------------------------------
     # 8. 训练器
@@ -161,6 +167,7 @@ def main():
         log_dir=log_dir,
         device=agent_cfg.device,
     )
+    print("[DEBUG] before runner.learn", flush=True)
     runner.learn(
         num_learning_iterations=agent_cfg.max_iterations,
         init_at_random_ep_len=True,  # 每个环境随机初始化 episode 长度
@@ -176,7 +183,13 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except SystemExit as exc:
+        # 有些库会调 sys.exit(0)，这里把退出码打出来
+        print(f"[DEBUG] SystemExit code={exc.code}", flush=True)
+        simulation_app.close()
+        raise
     except Exception:
-        # 出错时也要关掉 Isaac Sim，否则进程可能挂住
+        import traceback
+        traceback.print_exc()
         simulation_app.close()
         raise
