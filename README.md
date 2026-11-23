@@ -167,3 +167,39 @@ python scripts/play.py \
 
 `assets/t800/` 来自 EngineAI 的 `engineai_robotics_native_sdk-main`，仅用于本地训练；
 对外分发前请确认 SDK 的许可证。
+
+
+## 参考步态模仿（Mimic）
+
+用 MNN 走路策略录一段参考步态，再让 Isaac Lab 的策略跟踪它。
+
+### 1. 录制参考轨迹（MuJoCo 环境）
+
+```bash
+conda activate mujoco
+cd ~/t800_isaaclab
+
+python scripts/record_mnn_reference.py \
+  --mujoco-dir ~/mujoco_t800 \
+  --out assets/reference/walk_ref.npz \
+  --command 1.0 --warmup 2 --duration 3
+```
+
+生成 `assets/reference/walk_ref.npz`，并同步到
+`source/t800_lab/t800_lab/assets/reference/walk_ref.npz`。
+
+### 2. 训练 Mimic 任务
+
+```bash
+conda activate isaaclab
+cd ~/t800_isaaclab
+
+python -u scripts/train.py \
+  --task Isaac-T800-Mimic-v0 \
+  --num_envs 4096 \
+  --max_iterations 3000 \
+  --headless
+```
+
+动作是 `参考关节角 + action * 0.25`，策略只需要微调平衡。
+日志在 `logs/rsl_rl/t800_mimic/`。

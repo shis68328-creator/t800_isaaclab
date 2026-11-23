@@ -5,3 +5,5 @@
 """
 
 from . import velocity  # noqa: F401
+
+from . import mimic  # noqa: F401
