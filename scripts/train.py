@@ -133,7 +133,7 @@ def main():
     print(f"[INFO] 任务: {args_cli.task}")
     print(f"[INFO] 环境数: {args_cli.num_envs}")
     print(f"[INFO] 日志目录: {log_dir}")
-    print_dict(env_cfg.to_dict(), "env_cfg")
+    print_dict(env_cfg.to_dict())
     # 把这次训练的环境/PPO 配置存下来，方便复现
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
