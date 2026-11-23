@@ -103,7 +103,9 @@ class T800LocomotionEnvCfg(LocomotionVelocityRoughEnvCfg):
             self.scene.height_scanner = None
         if hasattr(self.observations.policy, "height_scan"):
             self.observations.policy.height_scan = None
-        if hasattr(self.observations.critic, "height_scan"):
+        # 有些 Isaac Lab 版本只有 policy 观测组，没有 critic；
+        # 直接访问 self.observations.critic 会 AttributeError。
+        if hasattr(self.observations, "critic") and hasattr(self.observations.critic, "height_scan"):
             self.observations.critic.height_scan = None
         if hasattr(self.curriculum, "terrain_levels"):
             self.curriculum.terrain_levels = None
